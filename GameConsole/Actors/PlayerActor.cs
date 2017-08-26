@@ -1,16 +1,18 @@
 ﻿using System;
-using Akka.Actor;
+using Akka.Persistence;
 using GameConsole.Messages;
 using Serilog;
 
 namespace GameConsole.Actors
 {
-    public class PlayerActor : ReceiveActor
+    public class PlayerActor : ReceivePersistentActor
     {
-        private static readonly ILogger Log = Serilog.Log.ForContext<PlayerActor>();
+        private new static readonly ILogger Log = Serilog.Log.ForContext<PlayerActor>();
 
         private readonly string _playerName;
         private int _health;
+
+        public override string PersistenceId => $"player-{_playerName}";
 
         public PlayerActor(string playerName, int health)
         {
@@ -19,9 +21,15 @@ namespace GameConsole.Actors
 
             Log.Information("{PlayerName} created", _playerName);
 
-            Receive<HitMessage>(msg => HitPlayer(msg));
-            Receive<DisplayStatusMessage>(_ => DisplayPlayerStatus());
-            Receive<CauseErrorMessage>(_ => SimulateError());
+            Command<HitMessage>(msg => HitPlayer(msg));
+            Command<DisplayStatusMessage>(_ => DisplayPlayerStatus());
+            Command<CauseErrorMessage>(_ => SimulateError());
+
+            Recover<HitMessage>(msg =>
+            {
+                Log.Information("{PlayerName} replaying HitMessage for {Damage} damage from journal", _playerName, msg.Damage);
+                _health -= msg.Damage;
+            });
         }
 
         private void SimulateError()
@@ -38,24 +46,38 @@ namespace GameConsole.Actors
         private void HitPlayer(HitMessage msg)
         {
             Log.Information("{PlayerName} received HitMessage for {Damage} damage", _playerName, msg.Damage);
-            _health -= msg.Damage;
+            Log.Information("{PlayerName} persisting HitMessage", _playerName);
+
+            Persist(msg, _ =>
+            {
+                Log.Information("{PlayerName} persisted HitMessage ok, updating actor state", _playerName);
+                _health -= msg.Damage;
+            });
         }
 
         protected override void PreStart()
         {
-            Log.Information("PreStart");
+            Log.Information("{PlayerName} PreStart", _playerName);
         }
 
         protected override void PostStop()
         {
-            Log.Information("PostStop");
+            Log.Information("{PlayerName} PostStop", _playerName);
         }
 
         protected override void PreRestart(Exception reason, object message)
         {
-            Log.Warning("PreRestart: Message of type {MessageType} caused exception with message {ExceptionMessage}",
-                message.GetType(),
-                reason.Message);
+            if (message != null)
+            {
+                Log.Warning(
+                    "PreRestart: Message of type {MessageType} caused exception with message {ExceptionMessage}",
+                    message.GetType(),
+                    reason.Message);
+            }
+            else
+            {
+                Log.Warning("PreRestart: {Reason}", reason.Message);
+            }
 
             base.PreRestart(reason, message);
         }
