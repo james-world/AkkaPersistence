@@ -34,14 +34,26 @@
 					schema-name = dbo
 
 					# persistent journal table name
-					table-name = eventjournal
+					table-name = EventJournal
 
 					# initialize journal table automatically
 					auto-initialize = on
 
 					timestamp-provider = "Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common"
-					metadata-table-name = metadata
+					metadata-table-name = Metadata
 			}
         }
+
+		snapshot-store {
+			plugin = "akka.persistence.snapshot-store.sql-server"
+			sql-server {
+				class = "Akka.Persistence.SqlServer.Snapshot.SqlServerSnapshotStore, Akka.Persistence.SqlServer"
+				plugin-dispatcher = "akka.actor.default-dispatcher"
+				table-name = SnapshotStore
+				schema-name = dbo
+				auto-initialize = on
+				connection-string = "Data Source=(local); Initial Catalog=GameConsoleAkka; Integrated Security=True;Application Name=Game Console"
+			}
+		}
     }
 }
