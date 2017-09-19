@@ -1,7 +1,8 @@
 ﻿using System;
 using Akka.Actor;
 using Akka.Persistence;
-using GameConsole.Messages;
+using GameConsole.Commands;
+using GameConsole.Events;
 using Serilog;
 
 namespace GameConsole.Actors
@@ -15,26 +16,27 @@ namespace GameConsole.Actors
 
         public PlayerCoordinatorActor()
         {
-            Command<CreatePlayerMessage>(msg =>
+            Command<CreatePlayer>(command =>
             {
-                Log.Information("Received CreatePlayerMessage for {PlayerName}", msg.PlayerName);
+                Log.Information("Received {CommandType} for {PlayerName}", nameof(CreatePlayer), command.PlayerName);
 
+                var @event = new PlayerCreated(command.PlayerName);
 
-                Persist(msg, createPlayerMessage =>
+                Persist(@event, playerCreatedEvent =>
                 {
-                    Log.Information("Persisted a CreatePlayerMessage for {PlayerName}", createPlayerMessage.PlayerName);
+                    Log.Information("Persisted a {EventType} for {PlayerName}", nameof(PlayerCreated), playerCreatedEvent.PlayerName);
 
-                    Context.ActorOf(Props.Create(() => new PlayerActor(createPlayerMessage.PlayerName, DefaultStartingHealth)),
-                        createPlayerMessage.PlayerName);
+                    Context.ActorOf(Props.Create(() => new PlayerActor(playerCreatedEvent.PlayerName, DefaultStartingHealth)),
+                        playerCreatedEvent.PlayerName);
                 });
             });
 
-            Recover<CreatePlayerMessage>(createPlayerMessage =>
+            Recover<PlayerCreated>(playerCreatedEvent =>
             {
-                Log.Information("Replaying CreatePlayerMessage for {PlayerName}", createPlayerMessage.PlayerName);
+                Log.Information("Replaying {EventType} for {PlayerName}", nameof(PlayerCreated), playerCreatedEvent.PlayerName);
 
-                Context.ActorOf(Props.Create(() => new PlayerActor(createPlayerMessage.PlayerName, DefaultStartingHealth)),
-                    createPlayerMessage.PlayerName);
+                Context.ActorOf(Props.Create(() => new PlayerActor(playerCreatedEvent.PlayerName, DefaultStartingHealth)),
+                    playerCreatedEvent.PlayerName);
             });
         }
 

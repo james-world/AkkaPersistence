@@ -1,6 +1,7 @@
 ﻿using System;
 using Akka.Persistence;
-using GameConsole.Messages;
+using GameConsole.Commands;
+using GameConsole.Events;
 using Serilog;
 
 namespace GameConsole.Actors
@@ -21,20 +22,20 @@ namespace GameConsole.Actors
 
             Log.Information("{PlayerName} created", _playerName);
 
-            Command<HitMessage>(msg => HitPlayer(msg));
-            Command<DisplayStatusMessage>(_ => DisplayPlayerStatus());
-            Command<CauseErrorMessage>(_ => SimulateError());
+            Command<HitPlayer>(msg => HitPlayer(msg));
+            Command<DisplayStatus>(_ => DisplayPlayerStatus());
+            Command<SimulateError>(_ => SimulateError());
 
-            Recover<HitMessage>(msg =>
+            Recover<PlayerHit>(playerHitEvent =>
             {
-                Log.Information("{PlayerName} replaying HitMessage for {Damage} damage from journal", _playerName, msg.Damage);
-                _health -= msg.Damage;
+                Log.Information("{PlayerName} replaying {EventType} for {Damage} damage from journal", _playerName, nameof(PlayerHit), playerHitEvent.DamageTaken);
+                _health -= playerHitEvent.DamageTaken;
             });
         }
 
         private void SimulateError()
         {
-            Log.Information("{PlayerName} received CauseErrorMessage", _playerName);
+            Log.Information("{PlayerName} received {Command}", _playerName, nameof(Commands.SimulateError));
             throw new ApplicationException($"Simulated exception in player: {_playerName}");
         }
 
@@ -43,15 +44,18 @@ namespace GameConsole.Actors
             Log.Information("{PlayerName} has {Health} health", _playerName, _health);
         }
 
-        private void HitPlayer(HitMessage msg)
+        private void HitPlayer(HitPlayer command)
         {
-            Log.Information("{PlayerName} received HitMessage for {Damage} damage", _playerName, msg.Damage);
-            Log.Information("{PlayerName} persisting HitMessage", _playerName);
+            Log.Information("{PlayerName} received {Command} for {Damage} damage", _playerName, nameof(Commands.HitPlayer), command.Damage);
 
-            Persist(msg, _ =>
+            var @event = new PlayerHit(command.Damage);
+
+            Log.Information("{PlayerName} persisting {Event}", _playerName, nameof(PlayerHit));
+
+            Persist(@event, playerHitEvent =>
             {
-                Log.Information("{PlayerName} persisted HitMessage ok, updating actor state", _playerName);
-                _health -= msg.Damage;
+                Log.Information("{PlayerName} persisted {Event} ok, updating actor state", _playerName, nameof(PlayerHit));
+                _health -= @event.DamageTaken;
             });
         }
 

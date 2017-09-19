@@ -1,8 +1,8 @@
-﻿namespace GameConsole.Messages
+﻿namespace GameConsole.Commands
 {
-    public class HitMessage
+    public class HitPlayer
     {
-        public HitMessage(int damage)
+        public HitPlayer(int damage)
         {
             Damage = damage;
         }

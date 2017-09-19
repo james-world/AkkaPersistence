@@ -1,7 +1,7 @@
 ﻿using Akka.Actor;
 using Akka.Configuration;
 using GameConsole.Actors;
-using GameConsole.Messages;
+using GameConsole.Commands;
 using Serilog;
 using static System.Console;
 
@@ -115,24 +115,24 @@ namespace GameConsole
 
         private static void CreatePlayer(string playerName)
         {
-            _playerCoordinator.Tell(new CreatePlayerMessage(playerName));
+            _playerCoordinator.Tell(new CreatePlayer(playerName));
         }
 
         private static void DisplayPlayer(string playerName)
         {
             _movieStreamingActorSystem.ActorSelection($"/user/PlayerCoordinator/{playerName}")
-                .Tell(new DisplayStatusMessage());
+                .Tell(new DisplayStatus());
         }
         
         private static void HitPlayer(string playerName, int damage)
         {
             _movieStreamingActorSystem.ActorSelection($"/user/PlayerCoordinator/{playerName}")
-                .Tell(new HitMessage(damage));
+                .Tell(new HitPlayer(damage));
         }
         private static void ErrorPlayer(string playerName)
         {
             _movieStreamingActorSystem.ActorSelection($"/user/PlayerCoordinator/{playerName}")
-                .Tell(new CauseErrorMessage());
+                .Tell(new SimulateError());
         }
 
         private static void DisplayInstructions()
