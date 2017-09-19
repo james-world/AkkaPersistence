@@ -1,7 +1,11 @@
-﻿namespace GameConsole.Events
+﻿using MessagePack;
+
+namespace GameConsole.Events
 {
-    public class PlayerHit
+    [MessagePackObject]
+    public class PlayerHit : IEvent
     {
+        [Key(0)]
         public int DamageTaken { get; }
 
         public PlayerHit(int damageTaken)

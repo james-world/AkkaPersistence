@@ -11,8 +11,11 @@
 		}       
 		serializers {
 			hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+			messagePack = "GameConsole.GameConsoleSerializer, GameConsole"
 		}
 		serialization-bindings {
+			"GameConsole.Actors.PlayerActorState, GameConsole" = messagePack
+			"GameConsole.Events.IEvent, GameConsole" = messagePack
 			"System.Object" = hyperion
 		}
     }

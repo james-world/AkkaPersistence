@@ -9,3 +9,7 @@ I have pretty much followed the course material except for these points:
 - Configured and used `Akka.Serialization.Hyperion` latest pre-release. This got rid of the annoying deprecation warning.
 - Used Serilog for console logging rather than the custom logging used in the course.
 - Configure to use a full-blown SqlServer, but you can easily change the connection string in the hocon file.
+
+### Update
+
+Following a discussion on the [Akka.NET gitter](https://gitter.im/akkadotnet/akka.net) with @Horusiath I've also implemented simple custom serialization using [MessagePack](https://github.com/neuecc/MessagePack-CSharp). See [this blog post](http://bartoszsypytkowski.com/akka-persistence-most-common-misconceptions/) for more on the motivation for this.
