@@ -1,4 +1,5 @@
-﻿using Akka.Actor;
+﻿using System.IO;
+using Akka.Actor;
 using Akka.Configuration;
 using GameConsole.Actors;
 using GameConsole.Commands;
@@ -21,55 +22,7 @@ namespace GameConsole
                     "{Timestamp:HH:mm} [{Level}] ({SourceContext}) {Message}{NewLine}{Exception}")
                 .CreateLogger();
 
-            var config = ConfigurationFactory.ParseString(@"
-                akka {
-                  loglevel=INFO,
-                  loggers = [""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""],
-                  actor {
-                    debug {
-                      receive = on
-                      autoreceive = on
-                      lifecycle = on
-                      event-stream = on
-                      unhandled = on
-                    }       
-                    serializers {
-                      hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                    }
-                    serialization-bindings {
-                      ""System.Object"" = hyperion
-                    }
-                  }
-
-                  persistence {
-                    journal {
-                        plugin = ""akka.persistence.journal.sql-server""
-                        sql-server {
-                              class = ""Akka.Persistence.SqlServer.Journal.SqlServerJournal, Akka.Persistence.SqlServer""
-                              plugin-dispatcher = ""akka.actor.default-dispatcher""
-
-                              # connection string used for database access
-                              connection-string = ""Data Source=(local); Initial Catalog=GameConsoleAkka; Integrated Security=True;Application Name=Game Console""
-
-                              # default sql timeout
-                              connection-timeout = 30s
-
-                              # sql server schema name
-                              schema-name = dbo
-
-                              # persistent journal table name
-                              table-name = eventjournal
-
-                              # initialize journal table automatically
-                              auto-initialize = on
-
-                              timestamp-provider = ""Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common""
-                              metadata-table-name = metadata
-                        }
-                     }
-                  }
-                }
-            ");
+            var config = ConfigurationFactory.ParseString(File.ReadAllText("AkkaConfig.hocon"));
 
             Log.Information("Creating Game");
             _movieStreamingActorSystem = ActorSystem.Create("Game", config);

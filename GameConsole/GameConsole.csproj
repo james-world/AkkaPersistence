@@ -13,4 +13,10 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="AkkaConfig.hocon">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
