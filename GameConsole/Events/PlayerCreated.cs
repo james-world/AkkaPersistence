@@ -1,7 +1,11 @@
-﻿namespace GameConsole.Events
+﻿using MessagePack;
+
+namespace GameConsole.Events
 {
-    public class PlayerCreated
+    [MessagePackObject]
+    public class PlayerCreated : IEvent
     {
+        [Key(0)]
         public string PlayerName { get; }
 
         public PlayerCreated(string playerName)
