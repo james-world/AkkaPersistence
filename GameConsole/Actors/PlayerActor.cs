@@ -10,17 +10,20 @@ namespace GameConsole.Actors
     {
         private new static readonly ILogger Log = Serilog.Log.ForContext<PlayerActor>();
 
-        private readonly string _playerName;
-        private int _health;
+        private PlayerActorState _state;
+        private int _eventCount;
 
-        public override string PersistenceId => $"player-{_playerName}";
+        public override string PersistenceId => $"player-{_state.PlayerName}";
 
         public PlayerActor(string playerName, int health)
         {
-            _playerName = playerName;
-            _health = health;
+            _state = new PlayerActorState
+            {
+                PlayerName = playerName,
+                Health = health
+            };
 
-            Log.Information("{PlayerName} created", _playerName);
+            Log.Information("{PlayerName} created", _state.PlayerName);
 
             Command<HitPlayer>(msg => HitPlayer(msg));
             Command<DisplayStatus>(_ => DisplayPlayerStatus());
@@ -28,45 +31,61 @@ namespace GameConsole.Actors
 
             Recover<PlayerHit>(playerHitEvent =>
             {
-                Log.Information("{PlayerName} replaying {EventType} for {Damage} damage from journal", _playerName, nameof(PlayerHit), playerHitEvent.DamageTaken);
-                _health -= playerHitEvent.DamageTaken;
+                Log.Information("{PlayerName} replaying {EventType} for {Damage} damage from journal", _state.PlayerName, nameof(PlayerHit), playerHitEvent.DamageTaken);
+                _state.Health -= playerHitEvent.DamageTaken;
+            });
+
+            Recover<SnapshotOffer>(offer =>
+            {
+                Log.Information("{PlayerName} received SnapshotOffer from snapshot store, updating state", _state.PlayerName);
+                _state = (PlayerActorState) offer.Snapshot;
+                Log.Information("{PlayerName} state {State} set from snapshot", _state.PlayerName, _state);
             });
         }
 
         private void SimulateError()
         {
-            Log.Information("{PlayerName} received {Command}", _playerName, nameof(Commands.SimulateError));
-            throw new ApplicationException($"Simulated exception in player: {_playerName}");
+            Log.Information("{PlayerName} received {Command}", _state.PlayerName, nameof(Commands.SimulateError));
+            throw new ApplicationException($"Simulated exception in player: {_state.PlayerName}");
         }
 
         private void DisplayPlayerStatus()
         {
-            Log.Information("{PlayerName} has {Health} health", _playerName, _health);
+            Log.Information("{PlayerName} has {Health} health", _state.PlayerName, _state.Health);
         }
 
         private void HitPlayer(HitPlayer command)
         {
-            Log.Information("{PlayerName} received {Command} for {Damage} damage", _playerName, nameof(Commands.HitPlayer), command.Damage);
+            Log.Information("{PlayerName} received {Command} for {Damage} damage", _state.PlayerName, nameof(Commands.HitPlayer), command.Damage);
 
             var @event = new PlayerHit(command.Damage);
 
-            Log.Information("{PlayerName} persisting {Event}", _playerName, nameof(PlayerHit));
+            Log.Information("{PlayerName} persisting {Event}", _state.PlayerName, nameof(PlayerHit));
 
             Persist(@event, playerHitEvent =>
             {
-                Log.Information("{PlayerName} persisted {Event} ok, updating actor state", _playerName, nameof(PlayerHit));
-                _health -= @event.DamageTaken;
+                Log.Information("{PlayerName} persisted {Event} ok, updating actor state", _state.PlayerName, nameof(PlayerHit));
+                _state.Health -= @event.DamageTaken;
+
+                _eventCount++;
+                if (_eventCount == 5)
+                {
+                    Log.Information("{PlayerName} saving snapshot", _state.PlayerName);
+                    SaveSnapshot(_state);
+                    Log.Information("{PlayerName} resetting event count to 0", _state.PlayerName);
+                    _eventCount = 0;
+                }
             });
         }
 
         protected override void PreStart()
         {
-            Log.Information("{PlayerName} PreStart", _playerName);
+            Log.Information("{PlayerName} PreStart", _state.PlayerName);
         }
 
         protected override void PostStop()
         {
-            Log.Information("{PlayerName} PostStop", _playerName);
+            Log.Information("{PlayerName} PostStop", _state.PlayerName);
         }
 
         protected override void PreRestart(Exception reason, object message)
